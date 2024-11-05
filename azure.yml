@@ -7,25 +7,28 @@ pool:
   vmImage: 'windows-latest'  # Use a Windows agent as SQL projects require it
 
 steps:
-  # Step 1: Install SSDT using the Visual Studio Installer
+  # Step 1: Install SSDT and related SQL components using the Visual Studio Installer
   - powershell: |
       $vsInstallerPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
       if (Test-Path $vsInstallerPath) {
-          # Run Visual Studio Installer to add SSDT (SQL Server Data Tools)
+          # Install SSDT and additional SQL components
           & $vsInstallerPath modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
                                     --add Microsoft.VisualStudio.Component.SQL.SSDT `
+                                    --add Microsoft.VisualStudio.Component.SQL.DataTools `
+                                    --add Microsoft.VisualStudio.Component.SQL.CLR `
                                     --passive --norestart
       } else {
           Write-Error "Visual Studio Installer not found on this agent."
       }
-    displayName: "Install SQL Server Data Tools (SSDT)"
-  # Step 1: Install the .NET SDK if needed
+    displayName: "Install SQL Server Data Tools (SSDT) and SQL Components"
+
+  # Step 2: Install the .NET SDK if needed
   - task: UseDotNet@2
     inputs:
       packageType: 'sdk'
       version: '6.0.302'  # Specify the required .NET SDK version
 
-  # Step 2: Build the SQL project
+  # Step 3: Build the SQL project
   - task: VSBuild@1
     inputs:
       solution: '**/*.sqlproj'  # Path to your SQL project file
@@ -33,7 +36,7 @@ steps:
       platform: 'Any CPU'
       configuration: 'Release'
 
-  # Step 3: Publish the DACPAC as an artifact
+  # Step 4: Publish the DACPAC as an artifact
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: '$(Build.SourcesDirectory)/**/bin/Release'  # Adjust if output path differs
