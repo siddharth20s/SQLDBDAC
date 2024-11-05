@@ -7,6 +7,18 @@ pool:
   vmImage: 'windows-latest'  # Use a Windows agent as SQL projects require it
 
 steps:
+  # Step 1: Install SSDT using the Visual Studio Installer
+  - powershell: |
+      $vsInstallerPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+      if (Test-Path $vsInstallerPath) {
+          # Run Visual Studio Installer to add SSDT (SQL Server Data Tools)
+          & $vsInstallerPath modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
+                                    --add Microsoft.VisualStudio.Component.SQL.SSDT `
+                                    --passive --norestart
+      } else {
+          Write-Error "Visual Studio Installer not found on this agent."
+      }
+    displayName: "Install SQL Server Data Tools (SSDT)"
   # Step 1: Install the .NET SDK if needed
   - task: UseDotNet@2
     inputs:
