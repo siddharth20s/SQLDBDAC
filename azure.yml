@@ -1,24 +1,29 @@
 trigger:
   branches:
     include:
-      - master  
+      - master  # Specify the branch to trigger builds
+
 pool:
-  vmImage: 'windows-latest'
+  vmImage: 'windows-latest'  # Use a Windows agent as SQL projects require it
 
 steps:
+  # Step 1: Install the .NET SDK if needed
   - task: UseDotNet@2
     inputs:
       packageType: 'sdk'
-      version: '6.0.302' 
+      version: '6.0.302'  # Specify the required .NET SDK version
 
-  - task: MSBuild@1
+  # Step 2: Build the SQL project
+  - task: VSBuild@1
     inputs:
-      solution: '**/testdb/testdb.sqlproj'
-      msbuildArchitecture: 'x64'
-      msbuildArguments: '/p:NetCoreBuild=true'
+      solution: '**/*.sqlproj'  # Path to your SQL project file
+      msbuildArgs: '/p:NetCoreBuild=true'  # Ensure compatibility with .NET Core if needed
+      platform: 'Any CPU'
+      configuration: 'Release'
 
-
+  # Step 3: Publish the DACPAC as an artifact
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: 'drop'
+      pathToPublish: '$(Build.SourcesDirectory)/**/bin/Release'  # Adjust if output path differs
+      artifactName: 'dacpac'
+      publishLocation: 'Container'
