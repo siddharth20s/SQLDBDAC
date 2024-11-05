@@ -56,6 +56,6 @@ stages:
                     DatabaseName: 'sampdbdac'  
                     SqlUsername: '$(azureconn)' 
                     SqlPassword: '$(Password@)'  
-                    DacpacFile: '$(Pipeline.Workspace)/drop/testdb/bin/Release/testdb.dacpac' 
+                    DacpacFile: '$(Pipeline.Workspace)/drop/testdb.dacpac' 
                     DeployType: 'DacpacTask'
                     AdditionalArguments: '/p:BlockOnPossibleDataLoss=False'
