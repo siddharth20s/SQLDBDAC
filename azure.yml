@@ -1,7 +1,7 @@
-trigger:
-  branches:
-    include:
-      - master 
+# trigger:
+#   branches:
+#     include:
+#       - master 
 
 pool:
   vmImage: 'windows-latest' 
@@ -58,4 +58,4 @@ stages:
                     SqlPassword: '$(Password@)'  
                     DacpacFile: '$(Pipeline.Workspace)/drop/testdb.dacpac' 
                     DeployType: 'DacpacTask'
-                    AdditionalArguments: '/p:BlockOnPossibleDataLoss=False'
+                    
