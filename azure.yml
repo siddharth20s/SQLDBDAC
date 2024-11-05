@@ -11,10 +11,12 @@ steps:
       packageType: 'sdk'
       version: '6.0.302' 
 
-  - task: DotNetCoreCLI@2
+  - task: MSBuild@1
     inputs:
-      command: 'build'
-      projects: '**/*.sqlproj'  
+      solution: '**/testdb/testdb.sqlproj'
+      msbuildArchitecture: 'x64'
+      msbuildArguments: '/p:NetCoreBuild=true'
+
 
   - task: PublishBuildArtifacts@1
     inputs:
