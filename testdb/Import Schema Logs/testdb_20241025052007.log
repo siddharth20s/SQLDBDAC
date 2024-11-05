@@ -1,0 +1,10 @@
+10/25/2024 10:50:07 AM	This log contains information about the import schema operation into project 'testdb' on computer 'KANINI-LTP-714' by user 'SiddharthRajendran'.
+10/25/2024 10:50:07 AM	Deserializing model
+10/25/2024 10:50:07 AM	Resolving model
+10/25/2024 10:50:07 AM	Visiting imported model for types
+10/25/2024 10:50:07 AM	Scanning project for duplicate elements
+10/25/2024 10:50:07 AM	Finished duplicate element processing
+10/25/2024 10:50:08 AM	Processing extra files
+10/25/2024 10:50:08 AM	Finished importing Data-tier Application file.
+10/25/2024 10:50:08 AM	A summary of the import was saved to the following location: C:\Users\SiddharthRajendran\source\repos\testdb\testdb\Import Schema Logs\testdb_20241025052007.log
+10/25/2024 10:50:08 AM	Click Finish to continue...
