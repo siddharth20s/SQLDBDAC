@@ -8,19 +8,19 @@ pool:
 
 steps:
   # Step 1: Install SSDT and related SQL components using the Visual Studio Installer
-  - powershell: |
-      $vsInstallerPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
-      if (Test-Path $vsInstallerPath) {
-          # Install SSDT and additional SQL components
-          & $vsInstallerPath modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
-                                    --add Microsoft.VisualStudio.Component.SQL.SSDT `
-                                    --add Microsoft.VisualStudio.Component.SQL.DataTools `
-                                    --add Microsoft.VisualStudio.Component.SQL.CLR `
-                                    --passive --norestart
-      } else {
-          Write-Error "Visual Studio Installer not found on this agent."
-      }
-    displayName: "Install SQL Server Data Tools (SSDT) and SQL Components"
+  # - powershell: |
+  #     $vsInstallerPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+  #     if (Test-Path $vsInstallerPath) {
+  #         # Install SSDT and additional SQL components
+  #         & $vsInstallerPath modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
+  #                                   --add Microsoft.VisualStudio.Component.SQL.SSDT `
+  #                                   --add Microsoft.VisualStudio.Component.SQL.DataTools `
+  #                                   --add Microsoft.VisualStudio.Component.SQL.CLR `
+  #                                   --passive --norestart
+  #     } else {
+  #         Write-Error "Visual Studio Installer not found on this agent."
+  #     }
+  #   displayName: "Install SQL Server Data Tools (SSDT) and SQL Components"
 
   # Step 2: Install the .NET SDK if needed
   - task: UseDotNet@2
@@ -40,6 +40,5 @@ steps:
   # Step 4: Publish the DACPAC as an artifact
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: '$(Build.SourcesDirectory)/**/bin/Release'  # Adjust if output path differs
-      artifactName: 'dacpac'
-      publishLocation: 'Container'
+      PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  # Exact path to the built artifacts
+      ArtifactName: 'drop' 
