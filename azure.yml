@@ -1,7 +1,7 @@
-# trigger:
-#   branches:
-#     include:
-#       - master 
+trigger:
+  branches:
+    include:
+      - master 
 
 pool:
   vmImage: 'windows-latest' 
@@ -54,8 +54,8 @@ stages:
                     azureSubscription: 'azureconn'  
                     ServerName: 'sampdbdac.database.windows.net' 
                     DatabaseName: 'sampdbdac'  
-                    SqlUsername: '$(azureconn)' 
-                    SqlPassword: '$(Password@)'  
+                    SqlUsername: 'azureconn' 
+                    SqlPassword: 'Password@'  
                     DacpacFile: '$(Pipeline.Workspace)/drop/testdb.dacpac' 
                     DeployType: 'DacpacTask'
                     
