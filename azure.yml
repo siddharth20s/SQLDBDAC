@@ -31,10 +31,11 @@ steps:
   # Step 3: Build the SQL project
   - task: VSBuild@1
     inputs:
-      solution: '**/*.sqlproj'  # Path to your SQL project file
-      msbuildArgs: '/p:NetCoreBuild=true'  # Ensure compatibility with .NET Core if needed
+      solution: '**/*.sln'   # Path to the solution file
+      msbuildArgs: '/p:Configuration=Release'  # Any additional arguments, if needed
       platform: 'Any CPU'
       configuration: 'Release'
+
 
   # Step 4: Publish the DACPAC as an artifact
   - task: PublishBuildArtifacts@1
