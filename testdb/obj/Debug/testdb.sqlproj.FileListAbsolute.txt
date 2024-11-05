@@ -4,3 +4,9 @@ C:\Users\SiddharthRajendran\source\repos\testdb\testdb\bin\Debug\testdb.pdb
 C:\Users\SiddharthRajendran\source\repos\testdb\testdb\obj\Debug\testdb.sqlproj.AssemblyReference.cache
 C:\Users\SiddharthRajendran\source\repos\testdb\testdb\obj\Debug\testdb.dll
 C:\Users\SiddharthRajendran\source\repos\testdb\testdb\obj\Debug\testdb.pdb
+C:\Users\SiddharthRajendran\source\repos\SQLDBDAC\testdb\bin\Debug\testdb.dacpac
+C:\Users\SiddharthRajendran\source\repos\SQLDBDAC\testdb\bin\Debug\testdb.dll
+C:\Users\SiddharthRajendran\source\repos\SQLDBDAC\testdb\bin\Debug\testdb.pdb
+C:\Users\SiddharthRajendran\source\repos\SQLDBDAC\testdb\obj\Debug\testdb.sqlproj.AssemblyReference.cache
+C:\Users\SiddharthRajendran\source\repos\SQLDBDAC\testdb\obj\Debug\testdb.dll
+C:\Users\SiddharthRajendran\source\repos\SQLDBDAC\testdb\obj\Debug\testdb.pdb
