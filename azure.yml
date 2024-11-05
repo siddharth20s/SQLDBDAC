@@ -1,44 +1,61 @@
 trigger:
   branches:
     include:
-      - master  # Specify the branch to trigger builds
+      - master 
 
 pool:
-  vmImage: 'windows-latest'  # Use a Windows agent as SQL projects require it
+  vmImage: 'windows-latest' 
 
-steps:
-  # Step 1: Install SSDT and related SQL components using the Visual Studio Installer
-  # - powershell: |
-  #     $vsInstallerPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
-  #     if (Test-Path $vsInstallerPath) {
-  #         # Install SSDT and additional SQL components
-  #         & $vsInstallerPath modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
-  #                                   --add Microsoft.VisualStudio.Component.SQL.SSDT `
-  #                                   --add Microsoft.VisualStudio.Component.SQL.DataTools `
-  #                                   --add Microsoft.VisualStudio.Component.SQL.CLR `
-  #                                   --passive --norestart
-  #     } else {
-  #         Write-Error "Visual Studio Installer not found on this agent."
-  #     }
-  #   displayName: "Install SQL Server Data Tools (SSDT) and SQL Components"
+stages:
+  - stage: Build
+    displayName: "Build Stage"
+    jobs:
+      - job: Build
+        displayName: "Build Job"
+        steps:
+         
+          - task: VSBuild@1
+            displayName: "Build Solution"
+            inputs:
+              solution: '**/*.sln'  
+              msbuildArgs: '/p:Configuration=Release'  
+              platform: 'Any CPU'
+              configuration: 'Release'
 
-  # Step 2: Install the .NET SDK if needed
-  - task: UseDotNet@2
-    inputs:
-      packageType: 'sdk'
-      version: '6.0.302'  # Specify the required .NET SDK version
+         
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish DACPAC as Artifact"
+            inputs:
+              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  
+              ArtifactName: 'drop'
 
-  # Step 3: Build the SQL project
-  - task: VSBuild@1
-    inputs:
-      solution: '**/*.sln'   # Path to the solution file
-      msbuildArgs: '/p:Configuration=Release'  # Any additional arguments, if needed
-      platform: 'Any CPU'
-      configuration: 'Release'
+  - stage: Deploy
+    displayName: "Deploy Stage"
+    dependsOn: Build
+    jobs:
+      - deployment: DeployToAzureSQL
+        displayName: 'Deploy to Azure SQL Database'
+        environment: 'production'
+        pool:
+          vmImage: 'windows-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              
+                - download: current
+                  artifact: 'drop'
+                  displayName: 'Download Build Artifacts'
 
-
-  # Step 4: Publish the DACPAC as an artifact
-  - task: PublishBuildArtifacts@1
-    inputs:
-      PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  # Exact path to the built artifacts
-      ArtifactName: 'drop' 
+               
+                - task: SqlAzureDacpacDeployment@1
+                  displayName: 'Deploy DACPAC to Azure SQL Database'
+                  inputs:
+                    azureSubscription: 'azureconn'  
+                    ServerName: 'sampdbdac.database.windows.net' 
+                    DatabaseName: 'sampdbdac'  
+                    SqlUsername: '$(azureconn)' 
+                    SqlPassword: '$(Password@)'  
+                    DacpacFile: '$(Pipeline.Workspace)/drop/testdb/bin/Release/testdb.dacpac' 
+                    DeployType: 'DacpacTask'
+                    AdditionalArguments: '/p:BlockOnPossibleDataLoss=False'
