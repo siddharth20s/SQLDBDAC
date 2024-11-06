@@ -1,10 +1,10 @@
 trigger:
   branches:
     include:
-      - master 
+      - master
 
 pool:
-  vmImage: 'windows-latest' 
+  vmImage: 'ubuntu-latest'  # Using a Linux agent
 
 stages:
   - stage: Build
@@ -13,20 +13,22 @@ stages:
       - job: Build
         displayName: "Build Job"
         steps:
-         
-          - task: VSBuild@1
-            displayName: "Build Solution"
+          # Build the project using .NET SDK Docker image for cross-platform compatibility
+          - task: UseDotNet@2
+            displayName: "Install .NET SDK"
             inputs:
-              solution: '**/*.sln'  
-              msbuildArgs: '/p:Configuration=Release'  
-              platform: 'Any CPU'
-              configuration: 'Release'
+              packageType: 'sdk'
+              version: '6.0.302'  # Specify your .NET SDK version here
 
-         
+          - script: |
+              dotnet build **/*.sln --configuration Release
+            displayName: "Build Solution"
+
+          # Publish the DACPAC file as an artifact
           - task: PublishBuildArtifacts@1
             displayName: "Publish DACPAC as Artifact"
             inputs:
-              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  
+              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'
               ArtifactName: 'drop'
 
   - stage: Deploy
@@ -35,27 +37,27 @@ stages:
     jobs:
       - deployment: DeployToAzureSQL
         displayName: 'Deploy to Azure SQL Database'
-        environment: 'production'
+        environment: 'Development'
         pool:
-          vmImage: 'windows-latest'
+          vmImage: 'ubuntu-latest'
         strategy:
           runOnce:
             deploy:
               steps:
-              
                 - download: current
                   artifact: 'drop'
                   displayName: 'Download Build Artifacts'
 
-               
-                - task: SqlAzureDacpacDeployment@1
-                  displayName: 'Deploy DACPAC to Azure SQL Database'
-                  inputs:
-                    azureSubscription: 'azureconn'  
-                    ServerName: 'sampdbdac.database.windows.net' 
-                    DatabaseName: 'sampdbdac'  
-                    SqlUsername: 'azureconn' 
-                    SqlPassword: 'Password@'  
-                    DacpacFile: '$(Pipeline.Workspace)/drop/testdb.dacpac' 
-                    DeployType: 'DacpacTask'
-                    
+                # Run DACPAC deployment using a Docker container with SQLPackage
+                - script: |
+                    docker run --rm \
+                      -v $(Pipeline.Workspace)/drop:/dacpac \
+                      mcr.microsoft.com/mssql/sqlpackage \
+                      /Action:Publish \
+                      /SourceFile:/dacpac/testdb.dacpac \
+                      /TargetServerName:sampdbdac.database.windows.net \
+                      /TargetDatabaseName:sampdbdac \
+                      /TargetUser:azureconn \
+                      /TargetPassword:Password@ \
+                      /p:BlockOnPossibleDataLoss=False
+                  displayName: "Deploy DACPAC to Azure SQL Database"
