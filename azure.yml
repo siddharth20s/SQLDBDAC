@@ -21,7 +21,7 @@ stages:
               version: '6.0.302'  # Specify your .NET SDK version here
 
           - script: |
-              dotnet build **/*.sln --configuration Release
+              dotnet build "$(Build.SourcesDirectory)/*.sln" --configuration Release
             displayName: "Build Solution"
 
           # Publish the DACPAC file as an artifact
