@@ -1,44 +1,66 @@
 trigger:
   branches:
     include:
-      - master  # Specify the branch to trigger builds
-
+      - master 
+ 
 pool:
-  vmImage: 'windows-latest'  # Use a Windows agent as SQL projects require it
+  vmImage: 'windows-latest' 
+ 
+stages:
+  - stage: Build
+    displayName: "Build Stage"
+    jobs:
+      - job: Build
+        displayName: "Build Job"
+        steps:
+         
+          - task: VSBuild@1
+            displayName: "Build Solution"
+            inputs:
+              solution: '**/*.sln'  
+              msbuildArgs: '/p:Configuration=Release'  
+              platform: 'Any CPU'
+              configuration: 'Release'
+ 
+         
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish DACPAC as Artifact"
+            inputs:
+              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  
+              ArtifactName: 'drop'
+ 
+  - stage: Deploy
+    displayName: "Deploy Stage"
+    dependsOn: Build
+    jobs:
+      - job: DeployToAzureSQL
+        displayName: 'Deploy to Azure SQL Database'
+        pool:
+          vmImage: 'ubuntu-latest'  # Using a Linux agent
+        steps:
+          - download: current
+            artifact: 'drop'
+            displayName: 'Download Build Artifacts'
+          
+          # Install sqlpackage on the Linux agent
+          - script: |
+              wget -q https://aka.ms/sqlpackage-linux -O sqlpackage.zip
+              unzip -q sqlpackage.zip -d sqlpackage
+              sudo chmod +x sqlpackage/sqlpackage
+              sudo mv sqlpackage/sqlpackage /usr/local/bin/sqlpackage
+              echo "sqlpackage installed to /usr/local/bin"
+              which sqlpackage || echo "sqlpackage not found"
+              ls -l /usr/local/bin/sqlpackage
+            displayName: 'Install sqlpackage and Verify Path'
 
-steps:
-  # Step 1: Install SSDT and related SQL components using the Visual Studio Installer
-  - powershell: |
-      $vsInstallerPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
-      if (Test-Path $vsInstallerPath) {
-          # Install SSDT and additional SQL components
-          & $vsInstallerPath modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
-                                    --add Microsoft.VisualStudio.Component.SQL.SSDT `
-                                    --add Microsoft.VisualStudio.Component.SQL.DataTools `
-                                    --add Microsoft.VisualStudio.Component.SQL.CLR `
-                                    --passive --norestart
-      } else {
-          Write-Error "Visual Studio Installer not found on this agent."
-      }
-    displayName: "Install SQL Server Data Tools (SSDT) and SQL Components"
+          # Use sqlpackage to deploy the DACPAC file
+          - script: |
+              /usr/local/bin/sqlpackage /Action:Publish \
+                /SourceFile:$(Pipeline.Workspace)/drop/testdb.dacpac \
+                /TargetServerName:sampdbdac.database.windows.net \
+                /TargetDatabaseName:sampdbdac \
+                /TargetUser:azureconn \
+                /TargetPassword:Password@
+            displayName: 'Deploy DACPAC to Azure SQL Database'
 
-  # Step 2: Install the .NET SDK if needed
-  - task: UseDotNet@2
-    inputs:
-      packageType: 'sdk'
-      version: '6.0.302'  # Specify the required .NET SDK version
-
-  # Step 3: Build the SQL project
-  - task: VSBuild@1
-    inputs:
-      solution: '**/*.sqlproj'  # Path to your SQL project file
-      msbuildArgs: '/p:NetCoreBuild=true'  # Ensure compatibility with .NET Core if needed
-      platform: 'Any CPU'
-      configuration: 'Release'
-
-  # Step 4: Publish the DACPAC as an artifact
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathToPublish: '$(Build.SourcesDirectory)/**/bin/Release'  # Adjust if output path differs
-      artifactName: 'dacpac'
-      publishLocation: 'Container'
+                    
