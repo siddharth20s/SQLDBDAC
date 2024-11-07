@@ -36,13 +36,13 @@ stages:
       - job: DeployToAzureSQL
         displayName: 'Deploy to Azure SQL Database'
         pool:
-          vmImage: 'ubuntu-latest'  
+          vmImage: 'ubuntu-latest'  # Using a Linux agent
         steps:
           - download: current
             artifact: 'drop'
             displayName: 'Download Build Artifacts'
           
-         
+          # Install sqlpackage on the Linux agent
           - script: |
               wget -q https://aka.ms/sqlpackage-linux -O sqlpackage.zip
               unzip -q sqlpackage.zip -d sqlpackage
@@ -50,16 +50,13 @@ stages:
               sudo mv sqlpackage/sqlpackage /usr/local/bin/sqlpackage
             displayName: 'Install sqlpackage'
 
-          
+          # Use sqlpackage to deploy the DACPAC file
           - script: |
-              sqlpackage /Action:Publish \
+              /usr/local/bin/sqlpackage /Action:Publish \
                 /SourceFile:$(Pipeline.Workspace)/drop/testdb.dacpac \
                 /TargetServerName:sampdbdac.database.windows.net \
                 /TargetDatabaseName:sampdbdac \
-                /TargetUser:$(sqlUsername) \
-                /TargetPassword:$(sqlPassword)
-            env:
-              sqlUsername: 'azureconn'  
-              sqlPassword: 'Password@'   
+                /TargetUser:azureconn \
+                /TargetPassword:Password@
             displayName: 'Deploy DACPAC to Azure SQL Database'
                     
