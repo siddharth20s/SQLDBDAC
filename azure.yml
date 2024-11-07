@@ -1,66 +1,71 @@
 trigger:
   branches:
     include:
-      - master 
- 
+      - main
+
 pool:
-  vmImage: 'windows-latest' 
- 
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  buildPlatform: 'Any CPU'
+  pipelineArtifactName: 'drop'
+
 stages:
   - stage: Build
-    displayName: "Build Stage"
     jobs:
-      - job: Build
-        displayName: "Build Job"
+      - job: BuildDACPAC
+        displayName: "Build DACPAC on Linux"
         steps:
-         
-          - task: VSBuild@1
-            displayName: "Build Solution"
+          # Install .NET SDK if needed
+          - task: UseDotNet@2
             inputs:
-              solution: '**/*.sln'  
-              msbuildArgs: '/p:Configuration=Release'  
-              platform: 'Any CPU'
-              configuration: 'Release'
- 
-         
-          - task: PublishBuildArtifacts@1
-            displayName: "Publish DACPAC as Artifact"
+              packageType: 'sdk'
+              version: '6.0.308'  # Adjust if your project uses a different .NET version
+          
+          # Restore NuGet Packages
+          - task: DotNetCoreCLI@2
+            displayName: 'Restore NuGet Packages for SQL Project'
             inputs:
-              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  
-              ArtifactName: 'drop'
- 
+              command: 'restore'
+              projects: '**/*DB.Build/*.csproj'  # Adjust the path to your .csproj
+
+          # Build the DACPAC
+          - task: DotNetCoreCLI@2
+            displayName: 'Build DACPAC'
+            inputs:
+              command: 'build'
+              projects: '**/*DB.Build/*.csproj'
+              arguments: '--configuration $(buildConfiguration) /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation=$(Pipeline.Workspace)/$(pipelineArtifactName)/DacPac/'
+
+          # Publish DACPAC as pipeline artifact
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish DACPAC Artifact'
+            inputs:
+              targetPath: '$(Pipeline.Workspace)/$(pipelineArtifactName)/DacPac/'
+              artifact: 'drop'
+
   - stage: Deploy
-    displayName: "Deploy Stage"
     dependsOn: Build
     jobs:
-      - job: DeployToAzureSQL
-        displayName: 'Deploy to Azure SQL Database'
-        pool:
-          vmImage: 'ubuntu-latest'  # Using a Linux agent
+      - job: DeployDACPAC
+        displayName: "Deploy DACPAC to Azure SQL Database"
         steps:
-          - download: current
-            artifact: 'drop'
-            displayName: 'Download Build Artifacts'
-          
-          # Install sqlpackage on the Linux agent
-          - script: |
-              wget -q https://aka.ms/sqlpackage-linux -O sqlpackage.zip
-              unzip -q sqlpackage.zip -d sqlpackage
-              sudo chmod +x sqlpackage/sqlpackage
-              sudo mv sqlpackage/sqlpackage /usr/local/bin/sqlpackage
-              echo "sqlpackage installed to /usr/local/bin"
-              which sqlpackage || echo "sqlpackage not found"
-              ls -l /usr/local/bin/sqlpackage
-            displayName: 'Install sqlpackage and Verify Path'
+          # Download the DACPAC artifact from the build stage
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifact: 'drop'
+              path: '$(Pipeline.Workspace)'
 
-          # Use sqlpackage to deploy the DACPAC file
+          # Deploy DACPAC using sqlpackage
           - script: |
               /usr/local/bin/sqlpackage /Action:Publish \
-                /SourceFile:$(Pipeline.Workspace)/drop/testdb.dacpac \
+                /SourceFile:$(Pipeline.Workspace)/drop/RecommenderAPI.DB.Build.dacpac \  # Adjust for actual DACPAC path
                 /TargetServerName:sampdbdac.database.windows.net \
                 /TargetDatabaseName:sampdbdac \
-                /TargetUser:azureconn \
-                /TargetPassword:Password@
+                /TargetUser:$(sqlUsername) \
+                /TargetPassword:$(sqlPassword)
+            env:
+              sqlUsername: 'azureconn'
+              sqlPassword: 'Password@'
             displayName: 'Deploy DACPAC to Azure SQL Database'
-
-                    
