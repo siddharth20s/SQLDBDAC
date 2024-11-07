@@ -1,12 +1,11 @@
-# build-pipeline.yml
 trigger:
   branches:
     include:
-      - master
-
+      - master 
+ 
 pool:
-  vmImage: 'windows-latest'
-
+  vmImage: 'windows-latest' 
+ 
 stages:
   - stage: Build
     displayName: "Build Stage"
@@ -14,11 +13,7 @@ stages:
       - job: Build
         displayName: "Build Job"
         steps:
-          - task: UseDotNet@2
-            inputs:
-              packageType: 'sdk'
-              version: '6.0.302'  
-
+         
           - task: VSBuild@1
             displayName: "Build Solution"
             inputs:
@@ -26,9 +21,41 @@ stages:
               msbuildArgs: '/p:Configuration=Release'  
               platform: 'Any CPU'
               configuration: 'Release'
-          
+ 
+         
           - task: PublishBuildArtifacts@1
-            displayName: "Publish Artifacts"
+            displayName: "Publish DACPAC as Artifact"
             inputs:
               PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  
               ArtifactName: 'drop'
+ 
+  - stage: Deploy
+    displayName: "Deploy Stage"
+    dependsOn: Build
+    jobs:
+      - deployment: DeployToAzureSQL
+        displayName: 'Deploy to Azure SQL Database'
+        environment: 'production'
+        pool:
+          vmImage: 'windows-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              
+                - download: current
+                  artifact: 'drop'
+                  displayName: 'Download Build Artifacts'
+ 
+               
+                - task: SqlAzureDacpacDeployment@1
+                  displayName: 'Deploy DACPAC to Azure SQL Database'
+                  inputs:
+                    azureSubscription: 'azureconn'  
+                    ServerName: 'sampdbdac.database.windows.net' 
+                    DatabaseName: 'sampdbdac'  
+                    SqlUsername: 'azureconn' 
+                    SqlPassword: 'Password@'  
+                    DacpacFile: '$(Pipeline.Workspace)/drop/testdb.dacpac' 
+                    DeployType: 'DacpacTask'
+                    
