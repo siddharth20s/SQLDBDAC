@@ -1,0 +1,8 @@
+﻿<Project Sdk="MSBuild.Sdk.SqlProj/1.1.0"> <!-- This will pull in the required tools and dependencies to build a .dacpac with .NET Core -->
+<PropertyGroup>
+<TargetFramework>netstandard2.0</TargetFramework>
+</PropertyGroup>
+<ItemGroup>
+<Content Include="..\src\DB\masterdata***.sql" /> <!-- link in the new .csproj to the .sql scripts in your existing database project -->
+</ItemGroup>
+</Project>
