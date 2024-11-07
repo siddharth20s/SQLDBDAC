@@ -22,7 +22,7 @@ stages:
               version: '5.x'
 
           - script: |
-              dotnet build $(Build.SourcesDirectory)/your-solution-name.sln -c Release
+              dotnet build $(Build.SourcesDirectory)/testdb.sln -c Release
             displayName: 'Build Solution'
 
           - task: PublishBuildArtifacts@1
