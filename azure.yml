@@ -1,5 +1,5 @@
 trigger:
-- main
+- master
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -10,7 +10,7 @@ steps:
   displayName: 'Use .NET Core SDK 3.1.x'
   inputs:
     packageType: 'sdk'
-    version: '3.1.0'
+    version: '3.1.x'
     installationPath: $(Agent.ToolsDirectory)/dotnet
 
 # Restore NuGet packages for the project
