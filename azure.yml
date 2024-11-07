@@ -4,7 +4,7 @@ trigger:
       - master 
 
 pool:
-  vmImage: 'ubuntu-latest'  # Using Linux agent
+  vmImage: 'ubuntu-latest'  # Linux agent for deployment
 
 stages:
   - stage: Build
@@ -12,15 +12,17 @@ stages:
     jobs:
       - job: Build
         displayName: "Build Job"
+        pool:
+          vmImage: 'windows-latest'  # Windows agent for building SQL project
         steps:
           - task: UseDotNet@2
             displayName: 'Install .NET SDK'
             inputs:
               packageType: 'sdk'
-              version: '5.x'  # Adjust version to match your project
+              version: '5.x'
 
           - script: |
-              dotnet build $(Build.SourcesDirectory)/testdb.sln -c Release
+              dotnet build $(Build.SourcesDirectory)/your-solution-name.sln -c Release
             displayName: 'Build Solution'
 
           - task: PublishBuildArtifacts@1
@@ -37,7 +39,7 @@ stages:
         displayName: 'Deploy to Azure SQL Database'
         environment: 'production'
         pool:
-          vmImage: 'ubuntu-latest'  # Using Linux agent here as well
+          vmImage: 'ubuntu-latest'  # Linux agent for deployment
         strategy:
           runOnce:
             deploy:
