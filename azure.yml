@@ -1,38 +1,60 @@
 trigger:
-- master
-
+  branches:
+    include:
+      - master 
+ 
 pool:
-  vmImage: 'ubuntu-latest'
-
-steps:
-# Use .NET Core SDK 3.1 to ensure compatibility with MSBuild.Sdk.SqlProj
-- task: UseDotNet@2
-  displayName: 'Use .NET Core SDK 3.1.x'
-  inputs:
-    packageType: 'sdk'
-    version: '3.1.x'
-    installationPath: $(Agent.ToolsDirectory)/dotnet
-
-# Restore NuGet packages for the project
-- task: DotNetCoreCLI@2
-  displayName: 'Restore NuGet packages'
-  inputs:
-    command: 'restore'
-    projects: '**/DB.Build.csproj'
-    feedsToUse: 'select'
-    vstsFeed: 'db-feed'  # Replace 'db-feed' with your actual feed name if required
-
-# Build the DACPAC file
-- task: DotNetCoreCLI@2
-  displayName: 'Build DACPAC file'
-  inputs:
-    command: 'build'
-    projects: '**/DB.Build.csproj'
-    arguments: '--configuration Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation=$(Pipeline.Workspace)/DacPac/'
-
-# Publish the DACPAC file as a build artifact
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish DACPAC'
-  inputs:
-    pathToPublish: '$(Pipeline.Workspace)/DacPac/'
-    artifactName: 'DacPac'
+  vmImage: 'windows-latest' 
+ 
+stages:
+  - stage: Build
+    displayName: "Build Stage"
+    jobs:
+      - job: Build
+        displayName: "Build Job"
+        steps:
+         
+          - task: VSBuild@1
+            displayName: "Build Solution"
+            inputs:
+              solution: '**/*.sln'  
+              msbuildArgs: '/p:Configuration=Release'  
+              platform: 'Any CPU'
+              configuration: 'Release'
+ 
+         
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish DACPAC as Artifact"
+            inputs:
+              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  
+              ArtifactName: 'drop'
+ 
+  - stage: Deploy
+    displayName: "Deploy Stage"
+    dependsOn: Build
+    jobs:
+      - deployment: DeployToAzureSQL
+        displayName: 'Deploy to Azure SQL Database'
+        environment: 'production'
+        pool:
+          vmImage: 'windows-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              
+                - download: current
+                  artifact: 'drop'
+                  displayName: 'Download Build Artifacts'
+ 
+               
+                - task: SqlAzureDacpacDeployment@1
+                  displayName: 'Deploy DACPAC to Azure SQL Database'
+                  inputs:
+                    azureSubscription: 'azureconn'  
+                    ServerName: 'sampdbdac.database.windows.net' 
+                    DatabaseName: 'sampdbdac'  
+                    SqlUsername: 'azureconn' 
+                    SqlPassword: 'Password@'  
+                    DacpacFile: '$(Pipeline.Workspace)/drop/testdb.dacpac' 
+                    DeployType: 'DacpacTask'
