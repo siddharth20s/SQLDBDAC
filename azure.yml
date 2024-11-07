@@ -15,19 +15,26 @@ stages:
         pool:
           vmImage: 'windows-latest'  # Windows agent for building SQL project
         steps:
-          - task: UseDotNet@2
-            displayName: 'Install .NET SDK'
-            inputs:
-              packageType: 'sdk'
-              version: '5.x'
+           - task: UseDotNet@2
+             displayName: 'Install .NET SDK'
+             inputs:
+                packageType: 'sdk'
+                version: '5.x'
 
-          - script: |
+           - script: |
+              echo Installing SSDT...
+              Invoke-WebRequest -Uri "https://aka.ms/ssdt-windows" -OutFile "SSDTSetup.exe"
+              Start-Process -FilePath "SSDTSetup.exe" -ArgumentList "/quiet" -Wait
+              Remove-Item "SSDTSetup.exe"
+             displayName: 'Install SQL Server Data Tools (SSDT)'
+
+           - script: |
               dotnet build $(Build.SourcesDirectory)/testdb.sln -c Release
-            displayName: 'Build Solution'
+             displayName: 'Build Solution'
 
-          - task: PublishBuildArtifacts@1
-            displayName: "Publish DACPAC as Artifact"
-            inputs:
+           - task: PublishBuildArtifacts@1
+             displayName: "Publish DACPAC as Artifact"
+             inputs:
               PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'
               ArtifactName: 'drop'
 
