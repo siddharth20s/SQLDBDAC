@@ -1,71 +1,38 @@
 trigger:
-  branches:
-    include:
-      - main
+- main
 
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  buildConfiguration: 'Release'
-  buildPlatform: 'Any CPU'
-  pipelineArtifactName: 'drop'
+steps:
+# Use .NET Core SDK 3.1 to ensure compatibility with MSBuild.Sdk.SqlProj
+- task: UseDotNet@2
+  displayName: 'Use .NET Core SDK 3.1.x'
+  inputs:
+    packageType: 'sdk'
+    version: '3.1.0'
+    installationPath: $(Agent.ToolsDirectory)/dotnet
 
-stages:
-  - stage: Build
-    jobs:
-      - job: BuildDACPAC
-        displayName: "Build DACPAC on Linux"
-        steps:
-          # Install .NET SDK if needed
-          - task: UseDotNet@2
-            inputs:
-              packageType: 'sdk'
-              version: '6.0.308'  # Adjust if your project uses a different .NET version
-          
-          # Restore NuGet Packages
-          - task: DotNetCoreCLI@2
-            displayName: 'Restore NuGet Packages for SQL Project'
-            inputs:
-              command: 'restore'
-              projects: '**/*DB.Build/*.csproj'  # Adjust the path to your .csproj
+# Restore NuGet packages for the project
+- task: DotNetCoreCLI@2
+  displayName: 'Restore NuGet packages'
+  inputs:
+    command: 'restore'
+    projects: '**/DB.Build.csproj'
+    feedsToUse: 'select'
+    vstsFeed: 'db-feed'  # Replace 'db-feed' with your actual feed name if required
 
-          # Build the DACPAC
-          - task: DotNetCoreCLI@2
-            displayName: 'Build DACPAC'
-            inputs:
-              command: 'build'
-              projects: '**/*DB.Build/*.csproj'
-              arguments: '--configuration $(buildConfiguration) /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation=$(Pipeline.Workspace)/$(pipelineArtifactName)/DacPac/'
+# Build the DACPAC file
+- task: DotNetCoreCLI@2
+  displayName: 'Build DACPAC file'
+  inputs:
+    command: 'build'
+    projects: '**/DB.Build.csproj'
+    arguments: '--configuration Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation=$(Pipeline.Workspace)/DacPac/'
 
-          # Publish DACPAC as pipeline artifact
-          - task: PublishPipelineArtifact@1
-            displayName: 'Publish DACPAC Artifact'
-            inputs:
-              targetPath: '$(Pipeline.Workspace)/$(pipelineArtifactName)/DacPac/'
-              artifact: 'drop'
-
-  - stage: Deploy
-    dependsOn: Build
-    jobs:
-      - job: DeployDACPAC
-        displayName: "Deploy DACPAC to Azure SQL Database"
-        steps:
-          # Download the DACPAC artifact from the build stage
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              artifact: 'drop'
-              path: '$(Pipeline.Workspace)'
-
-          # Deploy DACPAC using sqlpackage
-          - script: |
-              /usr/local/bin/sqlpackage /Action:Publish \
-                /SourceFile:$(Pipeline.Workspace)/drop/RecommenderAPI.DB.Build.dacpac \  # Adjust for actual DACPAC path
-                /TargetServerName:sampdbdac.database.windows.net \
-                /TargetDatabaseName:sampdbdac \
-                /TargetUser:$(sqlUsername) \
-                /TargetPassword:$(sqlPassword)
-            env:
-              sqlUsername: 'azureconn'
-              sqlPassword: 'Password@'
-            displayName: 'Deploy DACPAC to Azure SQL Database'
+# Publish the DACPAC file as a build artifact
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish DACPAC'
+  inputs:
+    pathToPublish: '$(Pipeline.Workspace)/DacPac/'
+    artifactName: 'DacPac'
