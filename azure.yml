@@ -55,11 +55,12 @@ stages:
 
           # Use sqlpackage to deploy the DACPAC file
           - script: |
-              sqlpackage /Action:Publish \
+              /usr/local/bin/sqlpackage /Action:Publish \
                 /SourceFile:$(Pipeline.Workspace)/drop/testdb.dacpac \
                 /TargetServerName:sampdbdac.database.windows.net \
                 /TargetDatabaseName:sampdbdac \
                 /TargetUser:azureconn \
                 /TargetPassword:Password@
             displayName: 'Deploy DACPAC to Azure SQL Database'
+
                     
