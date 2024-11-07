@@ -33,29 +33,33 @@ stages:
     displayName: "Deploy Stage"
     dependsOn: Build
     jobs:
-      - deployment: DeployToAzureSQL
+      - job: DeployToAzureSQL
         displayName: 'Deploy to Azure SQL Database'
-        environment: 'production'
         pool:
-          vmImage: 'windows-latest'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-              
-                - download: current
-                  artifact: 'drop'
-                  displayName: 'Download Build Artifacts'
- 
-               
-                - task: SqlAzureDacpacDeployment@1
-                  displayName: 'Deploy DACPAC to Azure SQL Database'
-                  inputs:
-                    azureSubscription: 'azureconn'  
-                    ServerName: 'sampdbdac.database.windows.net' 
-                    DatabaseName: 'sampdbdac'  
-                    SqlUsername: 'azureconn' 
-                    SqlPassword: 'Password@'  
-                    DacpacFile: '$(Pipeline.Workspace)/drop/testdb.dacpac' 
-                    DeployType: 'DacpacTask'
+          vmImage: 'ubuntu-latest'  
+        steps:
+          - download: current
+            artifact: 'drop'
+            displayName: 'Download Build Artifacts'
+          
+         
+          - script: |
+              wget -q https://aka.ms/sqlpackage-linux -O sqlpackage.zip
+              unzip -q sqlpackage.zip -d sqlpackage
+              sudo chmod +x sqlpackage/sqlpackage
+              sudo mv sqlpackage/sqlpackage /usr/local/bin/sqlpackage
+            displayName: 'Install sqlpackage'
+
+          
+          - script: |
+              sqlpackage /Action:Publish \
+                /SourceFile:$(Pipeline.Workspace)/drop/testdb.dacpac \
+                /TargetServerName:sampdbdac.database.windows.net \
+                /TargetDatabaseName:sampdbdac \
+                /TargetUser:$(sqlUsername) \
+                /TargetPassword:$(sqlPassword)
+            env:
+              sqlUsername: 'azureconn'  
+              sqlPassword: 'Password@'   
+            displayName: 'Deploy DACPAC to Azure SQL Database'
                     
