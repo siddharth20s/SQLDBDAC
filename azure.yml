@@ -1,10 +1,11 @@
+# build-pipeline.yml
 trigger:
   branches:
     include:
       - master
 
 pool:
-  vmImage: 'ubuntu-latest'  # Using a Linux agent
+  vmImage: 'windows-latest'
 
 stages:
   - stage: Build
@@ -13,51 +14,21 @@ stages:
       - job: Build
         displayName: "Build Job"
         steps:
-          # Build the project using .NET SDK Docker image for cross-platform compatibility
           - task: UseDotNet@2
-            displayName: "Install .NET SDK"
             inputs:
               packageType: 'sdk'
-              version: '6.0.302'  # Specify your .NET SDK version here
+              version: '6.0.302'  
 
-          - script: |
-              dotnet build "$(Build.SourcesDirectory)/testdb.sln" --configuration Release
+          - task: VSBuild@1
             displayName: "Build Solution"
-
-          # Publish the DACPAC file as an artifact
-          - task: PublishBuildArtifacts@1
-            displayName: "Publish DACPAC as Artifact"
             inputs:
-              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'
+              solution: '**/*.sln'  
+              msbuildArgs: '/p:Configuration=Release'  
+              platform: 'Any CPU'
+              configuration: 'Release'
+          
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Artifacts"
+            inputs:
+              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  
               ArtifactName: 'drop'
-
-  - stage: Deploy
-    displayName: "Deploy Stage"
-    dependsOn: Build
-    jobs:
-      - deployment: DeployToAzureSQL
-        displayName: 'Deploy to Azure SQL Database'
-        environment: 'Development'
-        pool:
-          vmImage: 'ubuntu-latest'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - download: current
-                  artifact: 'drop'
-                  displayName: 'Download Build Artifacts'
-
-                # Run DACPAC deployment using a Docker container with SQLPackage
-                - script: |
-                    docker run --rm \
-                      -v $(Pipeline.Workspace)/drop:/dacpac \
-                      mcr.microsoft.com/mssql/sqlpackage \
-                      /Action:Publish \
-                      /SourceFile:/dacpac/testdb.dacpac \
-                      /TargetServerName:sampdbdac.database.windows.net \
-                      /TargetDatabaseName:sampdbdac \
-                      /TargetUser:azureconn \
-                      /TargetPassword:Password@ \
-                      /p:BlockOnPossibleDataLoss=False
-                  displayName: "Deploy DACPAC to Azure SQL Database"
