@@ -2,10 +2,10 @@ trigger:
   branches:
     include:
       - master 
- 
+
 pool:
-  vmImage: 'windows-latest' 
- 
+  vmImage: 'ubuntu-latest'  # Using Linux agent
+
 stages:
   - stage: Build
     displayName: "Build Stage"
@@ -13,22 +13,21 @@ stages:
       - job: Build
         displayName: "Build Job"
         steps:
-         
-          - task: VSBuild@1
-            displayName: "Build Solution"
+          - task: UseDotNet@2
+            displayName: 'Install .NET SDK'
             inputs:
-              solution: '**/*.sln'  
-              msbuildArgs: '/p:Configuration=Release'  
-              platform: 'Any CPU'
-              configuration: 'Release'
- 
-         
+              packageType: 'sdk'
+              version: '5.x'  # Adjust version to match your project
+
+          - script: dotnet build '**/*.sln' -c Release
+            displayName: 'Build Solution'
+
           - task: PublishBuildArtifacts@1
             displayName: "Publish DACPAC as Artifact"
             inputs:
-              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'  
+              PathtoPublish: '$(Build.SourcesDirectory)/testdb/bin/Release'
               ArtifactName: 'drop'
- 
+
   - stage: Deploy
     displayName: "Deploy Stage"
     dependsOn: Build
@@ -37,17 +36,15 @@ stages:
         displayName: 'Deploy to Azure SQL Database'
         environment: 'production'
         pool:
-          vmImage: 'windows-latest'
+          vmImage: 'ubuntu-latest'  # Using Linux agent here as well
         strategy:
           runOnce:
             deploy:
               steps:
-              
                 - download: current
                   artifact: 'drop'
                   displayName: 'Download Build Artifacts'
- 
-               
+
                 - task: SqlAzureDacpacDeployment@1
                   displayName: 'Deploy DACPAC to Azure SQL Database'
                   inputs:
