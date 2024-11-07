@@ -48,11 +48,14 @@ stages:
               unzip -q sqlpackage.zip -d sqlpackage
               sudo chmod +x sqlpackage/sqlpackage
               sudo mv sqlpackage/sqlpackage /usr/local/bin/sqlpackage
-            displayName: 'Install sqlpackage'
+              echo "sqlpackage installed to /usr/local/bin"
+              which sqlpackage || echo "sqlpackage not found"
+              ls -l /usr/local/bin/sqlpackage
+            displayName: 'Install sqlpackage and Verify Path'
 
           # Use sqlpackage to deploy the DACPAC file
           - script: |
-              /usr/local/bin/sqlpackage /Action:Publish \
+              sqlpackage /Action:Publish \
                 /SourceFile:$(Pipeline.Workspace)/drop/testdb.dacpac \
                 /TargetServerName:sampdbdac.database.windows.net \
                 /TargetDatabaseName:sampdbdac \
