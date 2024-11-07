@@ -18,8 +18,9 @@ stages:
             inputs:
               packageType: 'sdk'
               version: '5.x'  # Adjust version to match your project
-
-          - script: dotnet build '**/*.sln' -c Release
+              
+          - script: |
+              dotnet build $(Build.SourcesDirectory)/your-solution-name.sln -c Release
             displayName: 'Build Solution'
 
           - task: PublishBuildArtifacts@1
